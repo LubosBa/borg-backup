@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Get absolute path of script.
+SCRIPT=$(readlink -f $0)
+SCRIPTDIR=$(dirname ${SCRIPT})
+BORG="${SCRIPTDIR}/borg-linux64"
+#
+if [[ ! -f "${SCRIPTDIR}/borg-linux64" ]]; then
+  echo "borg binary not present!"
+  exit 1
+fi
+
+# Load env variables.
+if [[ -f "${SCRIPTDIR}/env" ]]; then
+  source ${SCRIPTDIR}/env
+else
+  echo "No env file found"
+  exit 1
+fi
+
+# Check, if mandatory env variables are set.
+if [[ -z ${TMPDIR} || -z ${BORG_CONFIG_DIR} || -z ${BORG_CACHE_DIR} || -z ${BORG_SECURITY_DIR} || -z ${STORAGE} ]]; then
+  echo "One of mandatory env variables are not set or empty."
+  exit 1
+fi
+
+if [[ -z ${1} ]]; then
+  echo "Please provide repository name!"
+  echo "Usage: ${0} <repository-name>"
+  exit 1
+fi
+
+${BORG} init --encryption=repokey "${STORAGE}/${1}"

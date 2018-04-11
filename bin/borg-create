@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Get absolute path of script.
+SCRIPT=$(readlink -f $0)
+SCRIPTDIR=$(dirname ${SCRIPT})
+BORG="${SCRIPTDIR}/borg-linux64"
+DOCKERBASE="/data/containers"
+
+#
+if [[ ! -f "${SCRIPTDIR}/borg-linux64" ]]; then
+  echo "borg binary not present!"
+  exit 1
+fi
+
+if [[ -f "${SCRIPTDIR}/secret" ]]; then
+  export BORG_PASSPHRASE=$(cat ${SCRIPTDIR}/secret)
+fi
+
+# Load env variables.
+if [[ -f "${SCRIPTDIR}/env" ]]; then
+  source ${SCRIPTDIR}/env
+else
+  echo "No env file found"
+  exit 1
+fi
+
+# Check, if mandatory env variables are set.
+if [[ -z ${TMPDIR} || -z ${BORG_CONFIG_DIR} || -z ${BORG_CACHE_DIR} || -z ${BORG_SECURITY_DIR} || -z ${STORAGE} ]]; then
+  echo "One of mandatory env variables are not set or empty."
+  exit 1
+fi
+
+# Creates a backup of docker based FPM images.
+function dockerFPMbackup() {
+  for REPOSITORY in $(ls -c ${STORAGE}/dockerFPMbackup); do
+    BASENAME=$(basename ${REPOSITORY})
+    if [[ -d "${DOCKERBASE}/conf/${BASENAME}" || -d  "${DOCKERBASE}/data/webs1.m8.sk/${BASENAME}" ]]; then
+      ${BORG} create --compression auto,lzma,6 ${STORAGE}/dockerFPMbackup/${BASENAME}::{now:%Y-%m-%d} ${DOCKERBASE}/conf/${BASENAME} ${DOCKERBASE}/data/webs1.m8.sk/${BASENAME}
+    else
+      echo "No folder to backup!"
+      exit 1
+    fi
+  done
+}
+
+function staticHTMLbackup() {
+  for REPOSITORY in $(ls -c ${STORAGE}/static-html); do
+    BASENAME=$(basename ${REPOSITORY})
+    if [[ -d  "${DOCKERBASE}/data/webs1.m8.sk/${BASENAME}" ]]; then
+      ${BORG} create --compression auto,lzma,6 ${STORAGE}/static-html/${BASENAME}::{now:%Y-%m-%d} ${DOCKERBASE}/data/webs1.m8.sk/${BASENAME}
+    else
+      echo "No folder to backup!"
+      exit 1
+    fi
+  done
+}
+
+function docker() {
+  for REPOSITORY in $(ls -c ${STORAGE}/docker); do
+    BASENAME=$(basename ${REPOSITORY})
+    if [[ -d  "${DOCKERBASE}/data/${BASENAME}" || -d  "${DOCKERBASE}/conf/${BASENAME}" ]]; then
+      ${BORG} create --compression auto,lzma,6 ${STORAGE}/docker/${BASENAME}::{now:%Y-%m-%d} ${DOCKERBASE}/data/${BASENAME} ${DOCKERBASE}/conf/${BASENAME}
+    else
+      echo "No folder to backup!"
+      exit 1
+    fi
+  done
+}
+
+case ${1} in
+  docker-fpm)
+      dockerFPMbackup
+    ;;
+  static-html)
+      staticHTMLbackup
+    ;;
+  docker)
+      docker
+    ;;
+  *)
+     echo "Missing backup category: <docker-fpm|static-html|docker>"
+     exit 1
+esac
