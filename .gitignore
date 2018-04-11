@@ -1,0 +1,5 @@
+secret
+storage/*
+tmp/*
+conf/*
+.ftpconfig
