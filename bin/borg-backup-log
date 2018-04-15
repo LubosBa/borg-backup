@@ -1,0 +1,61 @@
+#!/bin/bash
+
+ES_HOST="http://172.17.0.3:9200"
+MAPPING="$(cat <<EOF
+{
+   "settings":{
+      "number_of_shards":1,
+      "number_of_replicas":0
+   },
+   "mappings":{
+      "doc":{
+         "properties":{
+            "timestamp":{
+               "type":"date",
+               "format":"epoch_second"
+            },
+            "repository":{
+               "type":"keyword"
+            },
+            "status":{
+               "type":"keyword"
+            }
+         }
+      }
+   }
+}
+EOF
+)"
+
+INDEX="borg-backup"
+
+# Check, if we have curl.
+hash curl >/dev/null 2>&1
+if [[ "${?}" -ne "0" ]]; then
+  echo "curl not found in path, please install it!"
+  exit 1
+fi
+
+# Initialize ElasticSearch index, if it doesn't exist.
+function index-init() {
+  curl -X PUT "${ES_HOST}/${INDEX}/doc" \
+       -H 'Content-Type: application/json' \
+       -d "${MAPPING}"
+}
+
+function log() {
+  TIMESTAMP="$(date +'%s')"
+  DOCUMENT="$(cat <<EOF
+  {
+    "timestamp": "${TIMESTAMP}",
+    "repository": "${1}",
+    "status": "${2}"
+  }
+EOF
+  )"
+  curl -s -X POST "${ES_HOST}/${INDEX}/doc/" \
+       -H 'Content-Type: application/json' \
+       -d "${DOCUMENT}" >/dev/null 2>&1
+}
+
+log ${1} ${2}
