@@ -36,6 +36,11 @@ function dockerFPMbackup() {
     BASENAME=$(basename ${REPOSITORY})
     if [[ -d "${DOCKERBASE}/conf/${BASENAME}" || -d  "${DOCKERBASE}/data/webs1.m8.sk/${BASENAME}" ]]; then
       ${BORG} create --compression auto,lzma,6 ${STORAGE}/dockerFPMbackup/${BASENAME}::{now:%Y-%m-%d} ${DOCKERBASE}/conf/${BASENAME} ${DOCKERBASE}/data/webs1.m8.sk/${BASENAME}
+      if [[ "${?}" -ne "0" ]]; then
+        borg-backup-log ${BASENAME} "FAILED"
+      else
+        borg-backup-log ${BASENAME} "SUCCESS"
+      fi
     else
       echo "No folder to backup!"
       exit 1
@@ -48,6 +53,11 @@ function staticHTMLbackup() {
     BASENAME=$(basename ${REPOSITORY})
     if [[ -d  "${DOCKERBASE}/data/webs1.m8.sk/${BASENAME}" ]]; then
       ${BORG} create --compression auto,lzma,6 ${STORAGE}/static-html/${BASENAME}::{now:%Y-%m-%d} ${DOCKERBASE}/data/webs1.m8.sk/${BASENAME}
+      if [[ "${?}" -ne "0" ]]; then
+        borg-backup-log ${BASENAME} "FAILED"
+      else
+        borg-backup-log ${BASENAME} "SUCCESS"
+      fi
     else
       echo "No folder to backup!"
       exit 1
@@ -60,6 +70,11 @@ function docker() {
     BASENAME=$(basename ${REPOSITORY})
     if [[ -d  "${DOCKERBASE}/data/${BASENAME}" || -d  "${DOCKERBASE}/conf/${BASENAME}" ]]; then
       ${BORG} create --compression auto,lzma,6 ${STORAGE}/docker/${BASENAME}::{now:%Y-%m-%d} ${DOCKERBASE}/data/${BASENAME} ${DOCKERBASE}/conf/${BASENAME}
+      if [[ "${?}" -ne "0" ]]; then
+        borg-backup-log ${BASENAME} "FAILED"
+      else
+        borg-backup-log ${BASENAME} "SUCCESS"
+      fi
     else
       echo "No folder to backup!"
       exit 1
